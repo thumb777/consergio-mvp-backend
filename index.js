@@ -25,30 +25,35 @@ db.sequelize
 // Configure CORS
 // Allowed origins for CORS
 const allowedOrigins = [
-  "https://consergio-mvp-frontend.vercel.app", // Add your domains here
-  "https://consergio-mvp-frontend.vercel.app", // Add your domains here
+  "https://consergio-mvp-frontend.vercel.app",
+  "http://localhost:5173", // Add localhost for development
 ];
 
-// CORS Middleware
+// CORS Middleware with more comprehensive configuration
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (e.g., mobile apps or Postman)
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+        return callback(new Error(msg), false);
       }
+      return callback(null, true);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true, // Allow credentials (cookies, headers, etc.)
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
 
-// Handle preflight OPTIONS requests
+// Handle preflight requests
 app.options("*", cors());
 
+// Middleware to parse JSON bodies
 app.use(express.json());
 
 // Routes
@@ -56,6 +61,17 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/waitlist", waitlistRoutes);
 app.use("/auth", authRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  if (err.message.includes("CORS")) {
+    // Handle CORS errors specifically
+    return res.status(403).json({ error: err.message });
+  }
+  // Handle other errors
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
