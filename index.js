@@ -26,6 +26,8 @@ db.sequelize
 // Allowed origins for CORS
 const allowedOrigins = [
   "https://consergio-mvp-frontend.vercel.app", // Add your domains here
+  "https://www.conserg.io", // Add your domains here
+  "https://www.letsgo.events", // Add your domains here
 ];
 
 // CORS Middleware
