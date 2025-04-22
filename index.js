@@ -26,6 +26,8 @@ db.sequelize
 // Allowed origins for CORS
 const allowedOrigins = [
   "https://consergio-mvp-frontend.vercel.app",
+  "https://www.conserg.io",
+  "https://www.letsgo.events",
   "http://localhost:5173", // Add localhost for development
 ];
 
