@@ -2,6 +2,7 @@ const OpenAI = require("openai");
 const dotenv = require("dotenv");
 const db = require("../models");
 const { QueryTypes } = require("sequelize");
+const moment = require('moment');
 
 // Ensure environment variables are loaded
 dotenv.config();
@@ -65,13 +66,49 @@ exports.chatCompletion = async (req, res) => {
       throw new Error("OpenAI API key is not configured");
     }
 
+    // Generate dynamic date context
+    const today = moment().format("YYYY-MM-DD");
+    const tomorrow = moment().add(1, 'day').format("YYYY-MM-DD");
+    const thisWeekend = {
+      start: moment().day(6).format("YYYY-MM-DD"), // Saturday
+      end: moment().day(7).format("YYYY-MM-DD")    // Sunday
+    };
+    const nextWeek = {
+      start: moment().add(1, 'week').startOf('isoWeek').format("YYYY-MM-DD"),
+      end: moment().add(1, 'week').endOf('isoWeek').format("YYYY-MM-DD") 
+    };
+    const nextWeekend = {
+      start: moment().add(1, 'week').day(6).format("YYYY-MM-DD"), // Next Saturday
+      end: moment().add(1, 'week').day(7).format("YYYY-MM-DD")    // Next Sunday
+    };
+    const endOfMonth = moment().endOf('month').format("YYYY-MM-DD");
+    const nextMonth = {
+      start: moment().add(1, 'month').startOf('month').format("YYYY-MM-DD"),
+      end: moment().add(1, 'month').endOf('month').format("YYYY-MM-DD")
+    };
+
+    // Build the date context string
+    const dateContext = `
+Today is ${today}.
+"Today" means "${today}".
+"Tomorrow" means "${tomorrow}".
+"This weekend" means from "${thisWeekend.start}" to "${thisWeekend.end}".
+"Next week" means from "${nextWeek.start}" to "${nextWeek.end}".
+"Next weekend" means from "${nextWeekend.start}" to "${nextWeekend.end}".
+"End of month" means "${endOfMonth}".
+"Next month" means from "${nextMonth.start}" to "${nextMonth.end}".
+`;
+
+    // Combine with your SQL_QUERY_PROMPT
+    const systemPrompt = dateContext + "\n" + process.env.SQL_QUERY_PROMPT;
+
     const queryGeneration = await openai.chat.completions.create({
       model: "gpt-4o",
       temperature: 0,
       messages: [
         {
           role: "system",
-          content: process.env.SQL_QUERY_PROMPT,
+          content: systemPrompt,
         },
         { role: "user", content: message },
       ],
